@@ -60,12 +60,15 @@ plays = plays[
     | (plays["rush_attempt"] == 1)
 ].copy()
 
+# Kneel-downs are clock management, not offensive/defensive performance —
+# drop them here so they don't drag down off_epa/success_rate/def_epa.
+plays = plays[plays["qb_kneel"] != 1].copy()
+
 plays["is_pass"] = plays["qb_dropback"] == 1
 
 plays["is_rush"]= (
     (plays["rush_attempt"] == 1)
     & (plays["qb_scramble"] != 1)
-    & (plays["qb_kneel"] != 1)
 )
 
 
