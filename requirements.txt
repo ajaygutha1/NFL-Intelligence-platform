@@ -1,6 +1,7 @@
 pandas
 numpy
-nflreadypy
+nflreadpy
 scikit-learn
 matplotlib
 joblib
+pyarrow
