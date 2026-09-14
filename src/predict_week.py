@@ -207,69 +207,69 @@ for _, game in week_games.iterrows():
 
     rows.append(row)
 
-    # generate probabilities
+# generate probabilities
 
-    weekly = pd.DataFrame(
-        rows
-    )
+weekly = pd.DataFrame(
+    rows
+)
 
-    X_week = weekly[
-        feature_cols
-    ]
+X_week = weekly[
+    feature_cols
+]
 
+weekly[
+    "home_prob"
+] = model.predict_proba(
+    X_week
+)[:, 1]
+
+weekly[
+    "away_prob"
+] = (
+        1
+        - weekly["home_prob"]
+)
+
+assert np.allclose(
+    weekly["home_prob"]
+    + weekly["away_prob"],
+    1.0
+)
+
+# print weekly predictions
+weekly[
+    "predicted_winner"
+] = np.where(
+    weekly["home_prob"] >= 0.5,
+
+    weekly["home_team"],
+
+    weekly["away_team"]
+)
+
+print(
+    "\n=============================="
+)
+
+print(
+    f"{SEASON} WEEK {WEEK} PREDICTIONS"
+)
+
+print(
+    "=============================="
+)
+
+print(
     weekly[
-        "home_prob"
-    ] = model.predict_proba(
-        X_week
-    )[:, 1]
-
-    weekly[
-        "away_prob"
-    ] = (
-            1
-            - weekly["home_prob"]
+        [
+            "away_team",
+            "home_team",
+            "away_prob",
+            "home_prob",
+            "predicted_winner"
+        ]
+    ].to_string(
+        index=False
     )
-
-    assert np.allclose(
-        weekly["home_prob"]
-        + weekly["away_prob"],
-        1.0
-    )
-
-    # print weekly predictions
-    weekly[
-        "predicted_winner"
-    ] = np.where(
-        weekly["home_prob"] >= 0.5,
-
-        weekly["home_team"],
-
-        weekly["away_team"]
-    )
-
-    print(
-        "\n=============================="
-    )
-
-    print(
-        f"{SEASON} WEEK {WEEK} PREDICTIONS"
-    )
-
-    print(
-        "=============================="
-    )
-
-    print(
-        weekly[
-            [
-                "away_team",
-                "home_team",
-                "away_prob",
-                "home_prob",
-                "predicted_winner"
-            ]
-        ].to_string(
-            index=False
-        )
-    )
+)
 
