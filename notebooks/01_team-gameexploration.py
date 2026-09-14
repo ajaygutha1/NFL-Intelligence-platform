@@ -1,12 +1,18 @@
 import nflreadpy as nfl
 import pandas as pd
 from pathlib import Path
+import numpy as np
 
-# Load one completed NFL season
-pbp = nfl.load_pbp(2025)
+# Load multiple completed NFL seasons
+SEASONS = [2021, 2022, 2023, 2024, 2025]
 
-#nflreadypy gives us Polars, convert it to pandas
+pbp = nfl.load_pbp(SEASONS)
+
+# nflreadpy gives us Polars, convert it to pandas
 pbp = pbp.to_pandas()
+
+print("\nLoaded seasons:")
+print(sorted(pbp["season"].unique()))
 
 print(pbp.shape)
 print(pbp.head())
@@ -368,7 +374,6 @@ print("\nGame 6 actual EPA:")
 print(target_game["off_epa"])
 previous_five["off_epa"].mean()
 
-import numpy as np
 
 print(
     np.isclose(

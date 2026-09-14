@@ -262,6 +262,26 @@ model_data["game_date"] = pd.to_datetime(
     model_data["game_date"]
 )
 
+# Save complete multi-season model dataset for Session 3
+model_data_path = (
+    ROOT
+    / "data"
+    / "processed"
+    / "model_data.csv"
+)
+
+model_data.to_csv(
+    model_data_path,
+    index=False
+)
+
+print(
+    "\nSaved model_data:",
+    model_data_path
+)
+
+
+
 
 print("\nSeasons in model_data:")
 print(
@@ -339,7 +359,7 @@ assert (
 )
 
 
-# Create x and y. Its a ML convention.
+# Create x and y. It is an ML convention.
 # Where: X= inputs/features , Y = answer
 
 X_train = train[feature_cols]
