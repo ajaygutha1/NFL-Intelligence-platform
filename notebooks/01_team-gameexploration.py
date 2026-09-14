@@ -1,5 +1,6 @@
 import nflreadpy as nfl
 import pandas as pd
+from pathlib import Path
 
 # Load one completed NFL season
 pbp = nfl.load_pbp(2025)
@@ -377,4 +378,23 @@ assert np.isclose(
     manual_average,
     rolling_average
 )
+
+
+# Find project root
+ROOT = Path(__file__).resolve().parents[1]
+
+# Location where processed data will be saved
+processed_dir = ROOT / "data" / "processed"
+
+# Make sure the folder exists
+processed_dir.mkdir(parents=True, exist_ok=True)
+
+# Save the completed team-game dataset
+team_game.to_csv(
+    processed_dir / "team_game.csv",
+    index=False
+)
+
+print("\nSaved team_game.csv successfully!")
+print(processed_dir / "team_game.csv")
 

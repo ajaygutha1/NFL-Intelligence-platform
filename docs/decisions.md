@@ -10,3 +10,14 @@ not be used when rolling-5 features are required.
 
 This keeps the amount of historical information consistent and ensures
 that the current game's performance is never used to predict itself.
+
+## Tied games
+
+Tied games are excluded from the V1 prediction model.
+
+The current target is binary:
+- 1 = home team wins
+- 0 = away team wins
+
+A tied game does not belong to either class, so ties are removed
+for the initial model.
