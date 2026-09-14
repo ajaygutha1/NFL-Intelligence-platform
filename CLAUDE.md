@@ -8,6 +8,14 @@ so the project can realistically finish in 2-3 sittings. Still a learning projec
 a build-it-for-them project — Claude teaches concepts and hands off implementation, just
 in bigger chunks with less ceremony between handoffs.
 
+**Updated 2026-09-13: maximum speed, targeting finish same day.** No more explicit
+"Learning Check" Q&A stops between tasks — teach concepts in a couple of sentences
+inline and move straight to the task. Still don't write the core pipeline/model code
+for Ajay (he implements, Claude gives TASK/INPUT/OUTPUT/CONSTRAINT specs and reviews),
+and still never compromise on no-leakage / temporal validation — those aren't ceremony,
+they're correctness. Everything else (explicit checkpoints, waiting for confirmation
+before continuing) is cut for speed.
+
 ## Non-negotiable rules for Claude in this repo
 
 - **Ajay (@ajaygutha1) is Driver for the whole project.** Claude teaches each session's
