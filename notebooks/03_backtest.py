@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime
 
 import pandas as pd
 import numpy as np
@@ -168,24 +169,24 @@ for test_season in seasons[1:]:
         season_predictions
     )
 
-    backtest_results = pd.DataFrame(
-        backtest_rows
-    )
+backtest_results = pd.DataFrame(
+    backtest_rows
+)
 
-    oos_predictions = pd.concat(
-        all_predictions,
-        ignore_index=True
-    )
+oos_predictions = pd.concat(
+    all_predictions,
+    ignore_index=True
+)
 
-    print("\n==============================")
-    print("WALK-FORWARD BACKTEST")
-    print("==============================")
+print("\n==============================")
+print("WALK-FORWARD BACKTEST")
+print("==============================")
 
-    print(
-        backtest_results.to_string(
-            index=False
-        )
+print(
+    backtest_results.to_string(
+        index=False
     )
+)
 
 
 fraction_positive, mean_predicted = (
@@ -249,12 +250,14 @@ plt.savefig(
 
 plt.show()
 
+holdout_season = seasons[-1]
+
 importance_train = model_data[
-    model_data["season"] < 2025
+    model_data["season"] < holdout_season
 ].copy()
 
 importance_test = model_data[
-    model_data["season"] == 2025
+    model_data["season"] == holdout_season
 ].copy()
 
 
@@ -475,7 +478,13 @@ model_bundle = {
         backtest_results
         .to_dict(
             orient="records"
-        )
+        ),
+
+    "model_version":
+        "v1",
+
+    "training_date":
+        datetime.now().isoformat()
 }
 
 model_path = (
