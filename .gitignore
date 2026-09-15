@@ -7,3 +7,10 @@ __pycache__/
 .ipynb_checkpoints/
 data/processed/*.csv
 
+# platform backend
+backend/*.db
+
+# platform frontend
+frontend/node_modules/
+frontend/.next/
+
