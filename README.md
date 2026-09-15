@@ -46,33 +46,45 @@ season.
 
 ## Prediction explanations
 
-<!--
-SHARAT — TASK 2/2: write this section in plain English.
-
-Below is a real example of what src/predict_week.py actually outputs for one
-game (2025 Week 12, Jets @ Ravens):
+When the model outputs something like:
 
     away_team home_team  away_prob  home_prob predicted_winner
           NYJ       BAL   0.205159   0.794841              BAL
 
-That means the model thinks the Ravens (home) have about a 79% chance to beat
-the Jets.
 
-Your job: explain what a prediction like this actually means to someone who
-has never seen this project before. Ideas to cover:
-  - What does "79% home win probability" mean in plain English? (It does NOT
-    mean the Ravens will win by a specific score — it's a probability.)
-  - Pick one or two of the model's real features (see the coefficients in
-    notebooks/03_backtest.py's output, e.g. diff_off_epa, diff_def_epa) and
-    describe in plain English what a "positive" vs "negative" value of that
-    feature for the home team means for the prediction.
-  - Do NOT say a coefficient directly equals a percentage-point swing unless
-    you've actually calculated that properly — logistic regression
-    coefficients don't work that way (they affect the log-odds, not the raw
-    probability, and the relationship isn't linear). Describe direction and
-    relative importance instead: "a bigger passing EPA advantage tends to
-    push the prediction toward the home team" is safe. "Every 0.1 EPA is
-    worth 5 percentage points" is not, unless proven.
+the 79% is a probability, not a guarantee. It means the model estimates
+that Baltimore has about a 79% chance of winning based on the statistical
+features available for this matchup. A loss would not necessarily mean the
+prediction was "wrong"—it would simply be an outcome that was considered
+less likely.
 
-Replace this whole comment with your actual writeup.
--->
+Two of the model's features help illustrate how this works:
+
+`diff_off_epa` (home team's recent offensive efficiency minus the away
+team's) has the largest coefficient in the model. When this value is
+positive, the home team has been generating more expected points per play
+on offense recently than the away team, so the model shifts its prediction
+toward a home win. When it is negative, the shift goes in the opposite
+direction.
+
+`diff_def_epa` (home team's recent EPA allowed minus the away team's) works
+in the opposite direction. Because a lower EPA allowed indicates a better
+defense, a negative `diff_def_epa` means the home team's defense has been
+performing better than the away team's. This also pushes the prediction
+toward a home win.
+
+Interestingly, `diff_off_epa` has the largest raw coefficient, but when we
+test feature usefulness by scrambling each feature and measuring how much
+accuracy drops (permutation importance), `diff_def_epa` comes out slightly
+ahead. This is a reminder that a larger coefficient does not automatically
+mean a feature is the most useful in practice.
+
+We also avoid interpreting a coefficient as a fixed probability conversion.
+For example, we would not say that "a 0.1 increase in `diff_off_epa` equals
+a 5 percentage point increase in win probability." Logistic regression
+coefficients operate on the log-odds scale rather than directly on
+probability, so the same feature change can have different effects on
+predicted probability depending on where the original prediction starts.
+For this reason, we describe these features primarily in terms of their
+direction and relative importance rather than using a fixed probability
+conversion.
