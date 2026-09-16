@@ -5,3 +5,8 @@ scikit-learn
 matplotlib
 joblib
 pyarrow
+
+# platform backend
+fastapi
+uvicorn[standard]
+sqlalchemy
