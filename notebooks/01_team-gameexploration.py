@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 # Load multiple completed NFL seasons
-SEASONS = [2021, 2022, 2023, 2024, 2025]
+SEASONS = list(range(2016, 2026))
 
 pbp = nfl.load_pbp(SEASONS)
 

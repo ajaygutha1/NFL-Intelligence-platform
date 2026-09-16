@@ -13,6 +13,7 @@ from sklearn.metrics import (
     brier_score_loss
 )
 
+
 #load data set
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -102,6 +103,14 @@ print(matchups.head().to_string())
 
 print("\nNumber of team-game rows:", len(team_game))
 print("Number of matchup rows:", len(matchups))
+
+# make sure every matchup has exactly 2 team-game rows
+assert len(team_game) == 2 * len(matchups), (
+    "Row-count invariant failed: every matchup should have exactly "
+    "2 team-game rows."
+)
+
+print("Row-count invariant passed")
 
 
 # difference features
@@ -217,6 +226,13 @@ matchups = matchups.dropna(
 
 
 # Removing tie games for model
+tie_games = matchups[
+    matchups["home_score"]
+    == matchups["away_score"]
+]
+
+print("\nTie games being removed:", len(tie_games))
+
 matchups = matchups[
     matchups["home_score"]
     != matchups["away_score"]
@@ -262,6 +278,7 @@ model_data["game_date"] = pd.to_datetime(
     model_data["game_date"]
 )
 
+
 # Save complete multi-season model dataset for Session 3
 model_data_path = (
     ROOT
@@ -279,9 +296,6 @@ print(
     "\nSaved model_data:",
     model_data_path
 )
-
-
-
 
 print("\nSeasons in model_data:")
 print(
@@ -507,3 +521,4 @@ print(
     "Prediction accuracy:",
     prediction_results["correct_prediction"].mean()
 )
+
