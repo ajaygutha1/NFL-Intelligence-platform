@@ -41,3 +41,17 @@ rather than a committed source of truth.
 
 No deployment tooling (Docker, hosting configs, CI) is part of this repo's scope —
 that work is owned by Sharat once the app runs locally.
+
+## Weekly prediction re-runs
+
+Weekly predictions use overwrite behavior for the same season and week.
+
+When `src/predict_week.py` is run again for an existing season/week,
+the old rows for that season/week are deleted before the newly generated
+predictions are inserted.
+
+This prevents duplicate predictions from appearing in the platform while
+still preserving predictions from other weeks and seasons.
+
+`generated_at` records when the current set of weekly predictions was
+produced.

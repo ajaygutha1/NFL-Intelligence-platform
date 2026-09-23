@@ -12,7 +12,7 @@ const FEATURES = [
   },
   {
     href: "/predictions",
-    title: "Weekly Predictions",
+    title: "Weekly predictions",
     description: "Live win probabilities for the upcoming week's matchups.",
     enabled: false,
   },

@@ -1,12 +1,21 @@
 from pathlib import Path
+from datetime import datetime, timezone
+import sys
 
 import pandas as pd
 import numpy as np
 import nflreadpy as nfl
 import joblib
 
-
 ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(
+    0,
+    str(ROOT / "backend")
+)
+
+from app.database import SessionLocal
+from app.models import WeeklyPrediction
 
 
 bundle = joblib.load(
@@ -246,6 +255,61 @@ weekly[
 
     weekly["away_team"]
 )
+
+# save weekly predictions to database
+generated_at = datetime.now(
+    timezone.utc
+).isoformat()
+
+db = SessionLocal()
+
+try:
+    # remove old predictions for this season and week
+    db.query(
+        WeeklyPrediction
+    ).filter(
+        WeeklyPrediction.season == SEASON,
+        WeeklyPrediction.week == WEEK
+    ).delete(
+        synchronize_session=False
+    )
+
+    prediction_rows = [
+        WeeklyPrediction(
+            season=SEASON,
+            week=WEEK,
+            generated_at=generated_at,
+            game_id=str(row["game_id"]),
+            home_team=str(row["home_team"]),
+            away_team=str(row["away_team"]),
+            home_prob=float(row["home_prob"]),
+            away_prob=float(row["away_prob"]),
+            predicted_winner=str(
+                row["predicted_winner"]
+            )
+        )
+        for _, row in weekly.iterrows()
+    ]
+
+    db.add_all(
+        prediction_rows
+    )
+
+    db.commit()
+
+    print(
+        f"\nSaved {len(prediction_rows)} "
+        "weekly predictions to database."
+    )
+
+except Exception:
+    db.rollback()
+    raise
+
+finally:
+    db.close()
+
+
 
 print(
     "\n=============================="

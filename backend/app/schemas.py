@@ -31,3 +31,21 @@ class ModelInfoOut(BaseModel):
     training_date: str
     feature_cols: list[str]
     training_seasons: list[int]
+
+
+class WeeklyPredictionOut(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    season: int
+    week: int
+    generated_at: str
+    game_id: str
+    home_team: str
+    away_team: str
+    home_prob: float
+    away_prob: float
+    predicted_winner: str
+
+

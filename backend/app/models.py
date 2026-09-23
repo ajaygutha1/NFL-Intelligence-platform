@@ -60,7 +60,7 @@ class ModelVersion(Base):
 
 
 class WeeklyPrediction(Base):
-    """Populated by Ajay's Weekly Predictions task, not the seed script."""
+    """Populated by Ajay's Weekly predictions task, not the seed script."""
 
     __tablename__ = "weekly_predictions"
 

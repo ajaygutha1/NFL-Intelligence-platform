@@ -28,6 +28,19 @@ export type ModelInfo = {
   training_seasons: number[];
 };
 
+export type WeeklyPrediction = {
+  season: number;
+  week: number;
+  generated_at: string;
+  game_id: string;
+  home_team: string;
+  away_team: string;
+  home_prob: number;
+  away_prob: number;
+  predicted_winner: string;
+};
+
+
 async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, { cache: "no-store" });
 
@@ -50,3 +63,14 @@ export function getBacktestPredictions(season?: number) {
 export function getModelInfo() {
   return apiGet<ModelInfo>("/api/model/info");
 }
+
+export function getWeeklyPredictions(
+  season: number,
+  week: number,
+) {
+  return apiGet<WeeklyPrediction[]>(
+    `/api/predictions/week/${season}/${week}`
+  );
+}
+
+getWeeklyPredictions(2025, 12)
