@@ -1,9 +1,9 @@
 """Populates the SQLite DB from the ML pipeline's CSV/joblib outputs.
 
 Re-run this any time `notebooks/03_backtest.py` regenerates the CSVs or the
-model bundle. Safe to run repeatedly: it wipes and re-creates every table
-each time (weekly_predictions included, since it's owned by the weekly
-prediction pipeline, not this script, once that pipeline exists).
+model bundle. Safe to run repeatedly: it wipes and re-creates every table it
+owns. `weekly_predictions` is owned by `src/predict_week.py`, so it is left
+untouched (and created if missing).
 """
 
 import json
@@ -18,6 +18,7 @@ from app.config import (  # noqa: E402
     BACKTEST_METRICS_CSV,
     BACKTEST_PREDICTIONS_CSV,
     MODEL_DATA_CSV,
+    MODEL_INSIGHTS_CSV,
 )
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.ml import get_model_info  # noqa: E402
@@ -25,13 +26,18 @@ from app.models import (  # noqa: E402
     BacktestMetric,
     BacktestPrediction,
     Game,
+    ModelInsight,
     ModelVersion,
     WeeklyPrediction,
 )
 
 
 def seed():
-    Base.metadata.drop_all(bind=engine)
+    seeded_tables = [
+        t for t in Base.metadata.sorted_tables
+        if t.name != WeeklyPrediction.__tablename__
+    ]
+    Base.metadata.drop_all(bind=engine, tables=seeded_tables)
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
@@ -94,6 +100,18 @@ def seed():
         ]
         db.bulk_save_objects(metrics)
         print(f"Seeded {len(metrics)} backtest metric rows")
+
+        insights = [
+            ModelInsight(
+                feature=row["feature"],
+                coefficient=row["coefficient"],
+                permutation_importance=row["permutation_importance"],
+                holdout_season=int(row["holdout_season"]),
+            )
+            for _, row in pd.read_csv(MODEL_INSIGHTS_CSV).iterrows()
+        ]
+        db.bulk_save_objects(insights)
+        print(f"Seeded {len(insights)} model insight rows")
 
         info = get_model_info()
         db.add(

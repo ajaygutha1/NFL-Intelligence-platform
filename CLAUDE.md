@@ -120,7 +120,16 @@ Router, TypeScript), Tailwind CSS v4, Recharts (`frontend/`). Both run locally o
 layout, same fetch-in-a-server-component approach, same UI primitives from
 `frontend/components/ui/` — for every feature below.
 
-### Features for Ajay to build next (same TASK/INPUT/OUTPUT/CONSTRAINT format as the ML sessions)
+### Status (2026-10-07): ML-side features are built
+
+At Ajay's explicit request, Claude implemented Weekly Predictions, Prediction History
+and Model Insights (below) end to end, so the ML portion of the web app is complete:
+`src/predict_week.py` CLI -> `weekly_predictions`, `/api/predictions/*`,
+`/api/model/insights`, the `/predictions`, `/history` and `/insights` pages, and a
+`tests/` suite. Ajay is building the neural-net features himself — do not touch those.
+The specs below are kept for reference.
+
+### Features (original specs, TASK/INPUT/OUTPUT/CONSTRAINT format)
 
 1. **Weekly Predictions**
    - TASK: Refactor `src/predict_week.py` so it writes its output into the

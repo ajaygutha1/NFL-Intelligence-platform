@@ -59,8 +59,17 @@ class ModelVersion(Base):
     training_seasons = Column(String, nullable=False)  # JSON-encoded list
 
 
+class ModelInsight(Base):
+    __tablename__ = "model_insights"
+
+    feature = Column(String, primary_key=True)
+    coefficient = Column(Float, nullable=False)
+    permutation_importance = Column(Float, nullable=False)
+    holdout_season = Column(Integer, nullable=False)
+
+
 class WeeklyPrediction(Base):
-    """Populated by Ajay's Weekly Predictions task, not the seed script."""
+    """Populated by src/predict_week.py, not the seed script (re-seeding keeps it)."""
 
     __tablename__ = "weekly_predictions"
 
@@ -68,9 +77,12 @@ class WeeklyPrediction(Base):
     season = Column(Integer, nullable=False)
     week = Column(Integer, nullable=False)
     generated_at = Column(String, nullable=False)
+    model_version = Column(String, nullable=False)
     game_id = Column(String, nullable=False)
+    game_date = Column(String, nullable=False)
     home_team = Column(String, nullable=False)
     away_team = Column(String, nullable=False)
     home_prob = Column(Float, nullable=False)
     away_prob = Column(Float, nullable=False)
     predicted_winner = Column(String, nullable=False)
+    drivers = Column(String, nullable=False)  # JSON: per-feature log-odds contributions

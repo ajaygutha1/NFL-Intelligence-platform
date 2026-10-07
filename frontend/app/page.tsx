@@ -13,20 +13,20 @@ const FEATURES = [
   {
     href: "/predictions",
     title: "Weekly Predictions",
-    description: "Live win probabilities for the upcoming week's matchups.",
-    enabled: false,
+    description: "Home-win probabilities for a week of games, with the features driving each pick.",
+    enabled: true,
   },
   {
     href: "/history",
     title: "Prediction History",
     description: "Every backtested game, filterable by season and confidence.",
-    enabled: false,
+    enabled: true,
   },
   {
     href: "/insights",
     title: "Model Insights",
     description: "Feature coefficients and permutation importance.",
-    enabled: false,
+    enabled: true,
   },
 ];
 

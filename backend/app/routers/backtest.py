@@ -38,8 +38,12 @@ def list_backtest_predictions(
         BacktestPredictionOut(
             game_id=prediction.game_id,
             test_season=prediction.test_season,
+            week=game.week,
+            game_date=game.game_date,
             home_team=game.home_team,
             away_team=game.away_team,
+            home_score=game.home_score,
+            away_score=game.away_score,
             home_prob=prediction.home_prob,
             predicted_home_win=prediction.predicted_home_win,
             correct=prediction.correct,

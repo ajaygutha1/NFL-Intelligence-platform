@@ -3,8 +3,10 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 
-# Load multiple completed NFL seasons
-SEASONS = list(range(2016, 2026))
+# Load completed NFL seasons plus the in-progress current season, so the
+# weekly prediction pipeline has this year's team-game history. Unfinished
+# games have no score, so notebook 02 drops them before training.
+SEASONS = list(range(2016, nfl.get_current_season() + 1))
 
 pbp = nfl.load_pbp(SEASONS)
 

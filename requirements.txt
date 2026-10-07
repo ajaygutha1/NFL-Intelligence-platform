@@ -10,3 +10,7 @@ pyarrow
 fastapi
 uvicorn[standard]
 sqlalchemy
+
+# tests
+pytest
+httpx

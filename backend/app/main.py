@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CORS_ORIGINS
-from app.routers import backtest, model
+from app.routers import backtest, model, predictions
 
 app = FastAPI(title="NFL Intelligence Platform API")
 
@@ -15,6 +15,7 @@ app.add_middleware(
 
 app.include_router(backtest.router)
 app.include_router(model.router)
+app.include_router(predictions.router)
 
 
 @app.get("/health")

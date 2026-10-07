@@ -21,9 +21,9 @@ export const metadata: Metadata = {
 
 const NAV_LINKS = [
   { href: "/model-performance", label: "Model Performance", enabled: true },
-  { href: "/predictions", label: "Weekly Predictions", enabled: false },
-  { href: "/history", label: "Prediction History", enabled: false },
-  { href: "/insights", label: "Model Insights", enabled: false },
+  { href: "/predictions", label: "Weekly Predictions", enabled: true },
+  { href: "/history", label: "Prediction History", enabled: true },
+  { href: "/insights", label: "Model Insights", enabled: true },
 ];
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

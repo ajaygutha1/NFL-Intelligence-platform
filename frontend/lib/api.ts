@@ -13,8 +13,12 @@ export type BacktestMetric = {
 export type BacktestPrediction = {
   game_id: string;
   test_season: number;
+  week: number;
+  game_date: string;
   home_team: string;
   away_team: string;
+  home_score: number;
+  away_score: number;
   home_prob: number;
   predicted_home_win: number;
   correct: number;
@@ -26,6 +30,49 @@ export type ModelInfo = {
   training_date: string;
   feature_cols: string[];
   training_seasons: number[];
+};
+
+export type ModelInsight = {
+  feature: string;
+  coefficient: number;
+  permutation_importance: number;
+  holdout_season: number;
+};
+
+export type WeekSummary = {
+  season: number;
+  week: number;
+  games: number;
+  generated_at: string;
+};
+
+export type FeatureDriver = {
+  feature: string;
+  contribution: number;
+};
+
+export type WeeklyGame = {
+  game_id: string;
+  game_date: string;
+  home_team: string;
+  away_team: string;
+  home_prob: number;
+  away_prob: number;
+  predicted_winner: string;
+  confidence: number;
+  drivers: FeatureDriver[];
+  home_score: number | null;
+  away_score: number | null;
+  correct: boolean | null;
+};
+
+export type WeeklyPredictions = {
+  season: number;
+  week: number;
+  generated_at: string;
+  model_version: string;
+  in_sample: boolean;
+  games: WeeklyGame[];
 };
 
 async function apiGet<T>(path: string): Promise<T> {
@@ -49,4 +96,16 @@ export function getBacktestPredictions(season?: number) {
 
 export function getModelInfo() {
   return apiGet<ModelInfo>("/api/model/info");
+}
+
+export function getModelInsights() {
+  return apiGet<ModelInsight[]>("/api/model/insights");
+}
+
+export function getPredictionWeeks() {
+  return apiGet<WeekSummary[]>("/api/predictions/weeks");
+}
+
+export function getWeeklyPredictions(season: number, week: number) {
+  return apiGet<WeeklyPredictions>(`/api/predictions/week/${season}/${week}`);
 }

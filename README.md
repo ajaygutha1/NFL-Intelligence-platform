@@ -19,8 +19,9 @@ probability using team efficiency stats (EPA, success rate) built from
    coefficients vs. permutation importance, error analysis on the most
    confident right/wrong predictions, and saves the final model
    (`models/nfl_win_model_v1.joblib`).
-4. `src/predict_week.py` — loads the saved model and produces win
-   probabilities for a real week of games.
+4. `src/predict_week.py` — loads the saved model, builds leak-free features
+   for a week of games, and stores win probabilities (plus the per-feature
+   drivers behind each one) in the platform database.
 
 ## How to run
 
@@ -29,20 +30,60 @@ pip install -r requirements.txt
 python notebooks/01_team-gameexploration.py
 python notebooks/02_matchupmodel.py
 python notebooks/03_backtest.py
-python src/predict_week.py
+python src/predict_week.py            # next unplayed week of the current season
 ```
 
-## Results (walk-forward backtest, 2022-2025)
+`predict_week.py` also takes `--season 2025 --week 12`, `--weeks 6-18`, and
+`--dry-run`. A game is only predicted once both teams have five prior games in
+that season, so the first predictable week of a season is usually week 6.
+
+## Run the platform (local)
+
+Needs Python 3.10+ and Node 20+.
+
+```bash
+# 1. backend: load the ML outputs into SQLite, then serve the API
+python backend/scripts/seed_db.py
+cd backend && uvicorn app.main:app --port 8000
+
+# 2. weekly predictions (needs notebooks 01-03 to have run)
+python src/predict_week.py --season 2025 --weeks 6-18
+
+# 3. frontend
+cd frontend && npm install && npm run dev      # http://localhost:3000
+```
+
+Pages: **Model Performance**, **Weekly Predictions**, **Prediction History**
+(every backtested game, filterable), and **Model Insights** (coefficients vs.
+permutation importance). Re-run `seed_db.py` whenever notebook 03 regenerates
+its CSVs; it leaves stored weekly predictions untouched.
+
+Tests: `pip install -r requirements.txt && pytest` (feature leakage checks,
+parity between the weekly features and the training features, API endpoints).
+
+## Results (walk-forward backtest, 2017-2025)
+
+Each season is predicted by a model trained only on earlier seasons.
 
 | Season | Games | Accuracy | Baseline (always home) | Log Loss | Brier | ROC AUC |
 |---|---|---|---|---|---|---|
-| 2022 | 190 | 65.8% | 57.9% | 0.626 | 0.218 | 0.699 |
-| 2023 | 190 | 62.1% | 58.9% | 0.660 | 0.234 | 0.631 |
-| 2024 | 190 | 68.4% | 54.2% | 0.622 | 0.215 | 0.726 |
-| 2025 | 190 | 60.5% | 52.6% | 0.635 | 0.224 | 0.689 |
+| 2017 | 174 | 67.8% | 59.2% | 0.595 | 0.204 | 0.730 |
+| 2018 | 175 | 69.7% | 57.1% | 0.580 | 0.198 | 0.765 |
+| 2019 | 174 | 61.5% | 55.2% | 0.666 | 0.235 | 0.654 |
+| 2020 | 174 | 65.5% | 48.3% | 0.644 | 0.226 | 0.714 |
+| 2021 | 191 | 60.2% | 52.9% | 0.668 | 0.237 | 0.655 |
+| 2022 | 190 | 66.8% | 57.9% | 0.614 | 0.213 | 0.701 |
+| 2023 | 190 | 62.1% | 58.9% | 0.666 | 0.236 | 0.626 |
+| 2024 | 190 | 68.9% | 54.2% | 0.608 | 0.208 | 0.740 |
+| 2025 | 190 | 62.6% | 52.6% | 0.626 | 0.219 | 0.706 |
+| **All** | **1,648** | **65.0%** | **55.2%** | **0.630** | **0.220** | **0.698** |
 
-The model beats the "always predict home team" baseline in every backtested
-season.
+**Headline: 65.0% accuracy vs. a 55.2% always-pick-the-home-team baseline
+(+9.8 points) over 1,648 out-of-sample games.** The model beats the baseline in
+all 9 backtested seasons. The "All" row is the game-weighted average of the
+seasons. Weekly predictions for a season the model was trained on (such as the
+2025 replays on the Weekly Predictions page) are in-sample and are labeled as
+such; the numbers above are the honest ones.
 
 ## Prediction explanations
 
@@ -61,7 +102,8 @@ less likely.
 Two of the model's features help illustrate how this works:
 
 `diff_off_epa` (home team's recent offensive efficiency minus the away
-team's) has the largest coefficient in the model. When this value is
+team's) has one of the largest coefficients in the model (second only to
+`diff_success_rate`). When this value is
 positive, the home team has been generating more expected points per play
 on offense recently than the away team, so the model shifts its prediction
 toward a home win. When it is negative, the shift goes in the opposite
@@ -73,10 +115,12 @@ defense, a negative `diff_def_epa` means the home team's defense has been
 performing better than the away team's. This also pushes the prediction
 toward a home win.
 
-Interestingly, `diff_off_epa` has the largest raw coefficient, but when we
-test feature usefulness by scrambling each feature and measuring how much
-accuracy drops (permutation importance), `diff_def_epa` comes out slightly
-ahead. This is a reminder that a larger coefficient does not automatically
+Interestingly, `diff_success_rate` and `diff_off_epa` have the largest raw
+coefficients, but when we test feature usefulness by scrambling each feature
+and measuring how much log loss rises (permutation importance), `diff_def_epa`
+comes out well ahead (about 0.070, versus 0.017 for `diff_success_rate`). The
+offensive features are highly correlated with each other, so they share credit
+in the coefficients, while defense carries information nothing else does. This is a reminder that a larger coefficient does not automatically
 mean a feature is the most useful in practice.
 
 We also avoid interpreting a coefficient as a fixed probability conversion.

@@ -531,3 +531,23 @@ backtest_results.to_csv(
     index=False
 )
 
+
+
+# save model insights (coefficients + permutation importance) so the API
+# can serve them without recomputing permutation importance per request
+model_insights = coefficients[
+    ["feature", "coefficient"]
+].merge(
+    perm_df,
+    on="feature"
+)
+
+model_insights[
+    "holdout_season"
+] = holdout_season
+
+model_insights.to_csv(
+    predictions_dir
+    / "model_insights.csv",
+    index=False
+)
