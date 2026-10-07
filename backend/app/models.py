@@ -86,3 +86,22 @@ class WeeklyPrediction(Base):
     away_prob = Column(Float, nullable=False)
     predicted_winner = Column(String, nullable=False)
     drivers = Column(String, nullable=False)  # JSON: per-feature log-odds contributions
+
+
+class PredictionRun(Base):
+    """One row per (season, week) the weekly pipeline has attempted.
+
+    Lets the app say *why* a week has no predictions yet (e.g. teams still
+    lack five prior games) instead of just showing an empty page.
+    """
+
+    __tablename__ = "prediction_runs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    season = Column(Integer, nullable=False)
+    week = Column(Integer, nullable=False)
+    run_at = Column(String, nullable=False)
+    first_kickoff = Column(String, nullable=False)
+    scheduled_games = Column(Integer, nullable=False)
+    predicted_games = Column(Integer, nullable=False)
+    message = Column(String, nullable=False)

@@ -87,3 +87,30 @@ still preserving predictions from other weeks and seasons.
 
 `generated_at` records when the current set of weekly predictions was
 produced.
+
+
+## In-season readiness (2026-10-07)
+
+**The weekly command refreshes its own data.** `predict_week.py` compares finished
+games in the schedule with what `team_game.csv` holds and reruns notebook 01 only
+when it is behind, so a stale or missing current season no longer breaks the run.
+
+**Empty weeks explain themselves.** Each attempt is recorded in `prediction_runs`
+(games scheduled, games predicted, plain-English reason) and served at
+`/api/predictions/status`; the page shows it as a banner. The five-prior-game rule
+means week 5 of 2026 (kickoff Oct 8) cannot be predicted, and week 6 only partly, so
+silence would have looked like a bug.
+
+**"In-sample" now means trained on it *and* predicted after kickoff.** Judging by
+season alone would have mislabeled genuine 2026 forecasts as replays as soon as the
+model was retrained on 2026 games. A forecast generated before the first kickoff of
+its week stays a forecast.
+
+**Pipeline-owned tables rebuild when their columns change.** `weekly_predictions` and
+`prediction_runs` survive re-seeding, so an old database kept a stale schema and the
+API returned 500. `ensure_derived_tables()` drops and recreates a table only when its
+columns differ; both hold regenerable data.
+
+**Open question (not changed):** an early-season window that reaches back into the
+previous season would make weeks 1-5 predictable, but it changes the feature
+definition, so the model and every backtest number would have to be rebuilt.

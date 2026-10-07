@@ -33,8 +33,30 @@ python notebooks/03_backtest.py
 python src/predict_week.py            # next unplayed week of the current season
 ```
 
-`predict_week.py` also takes `--season 2025 --week 12`, `--weeks 6-18`, and
-`--dry-run`. A game is only predicted once both teams have five prior games in
+## Weekly routine (2026 season and beyond)
+
+Run this after nflverse publishes a week's results (usually within a day of the
+games):
+
+```bash
+python src/predict_week.py
+```
+
+It checks whether `team_game.csv` is behind the schedule and, if so, refreshes it
+from nflverse first (about a minute), then predicts the next unplayed week and
+stores it. Every run also records a status row, so the Predictions page can say
+*why* a week is empty instead of showing nothing: for example, "0 of 15 games
+predicted: each team needs 5 prior games and the most any team has played is 4."
+Weeks with byes predict the games that are ready and report the rest.
+
+The model only predicts a game once both teams have five prior games in that
+season, so the first predictable week of a season is usually week 6. A forecast
+made before kickoff is labeled as a genuine forecast even after the model is
+later retrained on that season. Retrain with notebooks 02 and 03 whenever you want
+the new games in the training data.
+
+`predict_week.py` also takes `--season 2025 --week 12`, `--weeks 6-18`,
+`--dry-run`, and `--no-refresh`. A game is only predicted once both teams have five prior games in
 that season, so the first predictable week of a season is usually week 6.
 
 ## Run the platform (local)

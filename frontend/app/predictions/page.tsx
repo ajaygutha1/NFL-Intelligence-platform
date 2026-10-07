@@ -5,13 +5,34 @@ import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import {
+  getPredictionStatus,
   getPredictionWeeks,
   getWeeklyPredictions,
+  type PredictionRun,
   type WeeklyGame,
 } from "@/lib/api";
 import { featureLabel, pct } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
+
+function StatusBanner({ run }: { run: PredictionRun }) {
+  return (
+    <Card className="mb-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-medium">
+          {run.season} week {run.week} &middot; kickoff {run.first_kickoff}
+        </h2>
+        <span className="text-xs font-mono text-muted">
+          {run.predicted_games} of {run.scheduled_games} games predicted
+        </span>
+      </div>
+      <p className="mt-2 text-sm text-muted">{run.message}</p>
+      <p className="mt-2 text-xs text-muted">
+        Last checked {new Date(run.run_at).toLocaleString()}
+      </p>
+    </Card>
+  );
+}
 
 function topDrivers(game: WeeklyGame) {
   return [...game.drivers]
@@ -50,12 +71,19 @@ export default async function PredictionsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const weeks = await getPredictionWeeks();
+  const [weeks, status] = await Promise.all([
+    getPredictionWeeks(),
+    // The status banner is optional: never let it take the page down.
+    getPredictionStatus().catch(() => null),
+  ]);
+  const pending =
+    status && status.predicted_games < status.scheduled_games ? status : null;
 
   if (weeks.length === 0) {
     return (
       <div className="mx-auto max-w-6xl px-6 py-12">
         <PageHeader eyebrow="Win probabilities" title="Weekly Predictions" />
+        {pending && <StatusBanner run={pending} />}
         <Card>
           <p className="text-sm text-muted">
             No predictions stored yet. Run{" "}
@@ -116,6 +144,8 @@ export default async function PredictionsPage({
           </div>
         ))}
       </div>
+
+      {pending && <StatusBanner run={pending} />}
 
       {data.in_sample && (
         <Card className="mb-8">

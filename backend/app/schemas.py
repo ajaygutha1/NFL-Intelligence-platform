@@ -82,3 +82,15 @@ class WeeklyPredictionsOut(BaseModel):
     # replay of a past week rather than a genuine out-of-sample forecast.
     in_sample: bool
     games: list[WeeklyGameOut]
+
+
+class PredictionRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    season: int
+    week: int
+    run_at: str
+    first_kickoff: str
+    scheduled_games: int
+    predicted_games: int
+    message: str

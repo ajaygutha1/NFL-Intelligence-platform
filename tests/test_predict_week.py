@@ -97,3 +97,39 @@ def test_scoring_probabilities_and_drivers():
     for _, row in scored.iterrows():
         logit = intercept + sum(d["contribution"] for d in json.loads(row.drivers))
         assert 1 / (1 + np.exp(-logit)) == pytest.approx(row.home_prob)
+
+
+def _schedule(scores):
+    return pd.DataFrame(
+        {"game_type": ["REG"] * len(scores), "home_score": scores}
+    )
+
+
+def test_team_game_staleness_compares_finished_games():
+    team_game = pd.DataFrame({"season": [2026, 2026, 2025], "game_id": ["a", "b", "z"]})
+    assert pw.team_game_is_stale(team_game, _schedule([1, 2, 3]), 2026)  # 3 played, 2 known
+    assert not pw.team_game_is_stale(team_game, _schedule([1, 2, None]), 2026)
+    # Unplayed games (no score) never count, and other seasons are ignored.
+    assert not pw.team_game_is_stale(team_game, _schedule([None, None]), 2026)
+
+
+def test_run_message_explains_why_a_week_is_not_ready():
+    assert "All 16" in pw.run_message(16, 16, 5)
+    none_ready = pw.run_message(15, 0, 4)
+    assert "No games predictable yet" in none_ready and "is 4" in none_ready
+    partial = pw.run_message(14, 9, 5)
+    assert "9 of 14" in partial and "bye" in partial
+
+
+def test_games_played_before_uses_only_earlier_games():
+    tg = pd.DataFrame(
+        {
+            "season": [2026] * 5,
+            "team": ["A", "A", "A", "B", "B"],
+            "game_date": pd.to_datetime(
+                ["2026-09-10", "2026-09-17", "2026-10-08", "2026-09-10", "2026-09-17"]
+            ),
+        }
+    )
+    week = pd.DataFrame({"game_date": pd.to_datetime(["2026-10-08", "2026-10-09"])})
+    assert pw.games_played_before(tg, 2026, week) == 2  # the Oct 8 game is excluded

@@ -13,6 +13,7 @@ from app.models import (
     BacktestPrediction,
     Game,
     ModelInsight,
+    PredictionRun,
     WeeklyPrediction,
 )
 
@@ -43,6 +44,18 @@ def client():
                 game_id="2025_06_A_B", game_date="2025-10-12", home_team="B", away_team="A",
                 home_prob=0.7, away_prob=0.3, predicted_winner="B",
                 drivers=json.dumps([{"feature": "diff_off_epa", "contribution": 0.2}]),
+            ),
+            PredictionRun(season=2026, week=6, run_at="2026-10-07T00:00:00+00:00",
+                          first_kickoff="2026-10-11", scheduled_games=2, predicted_games=1,
+                          message="1 of 2 games predicted"),
+            PredictionRun(season=2026, week=5, run_at="2026-10-01T00:00:00+00:00",
+                          first_kickoff="2026-10-04", scheduled_games=2, predicted_games=0,
+                          message="older"),
+            WeeklyPrediction(
+                season=2025, week=7, generated_at="2025-10-01T00:00:00+00:00",
+                model_version="v1", game_id="2025_07_E_F", game_date="2025-10-19",
+                home_team="F", away_team="E", home_prob=0.6, away_prob=0.4,
+                predicted_winner="F", drivers="[]",
             ),
             WeeklyPrediction(
                 season=2026, week=6, generated_at="2026-10-07T00:00:00", model_version="v1",
@@ -79,7 +92,7 @@ def test_model_insights_sorted_by_permutation_importance(client):
 
 def test_prediction_weeks_newest_first(client):
     weeks = client.get("/api/predictions/weeks").json()
-    assert [(w["season"], w["week"]) for w in weeks] == [(2026, 6), (2025, 6)]
+    assert [(w["season"], w["week"]) for w in weeks] == [(2026, 6), (2025, 7), (2025, 6)]
 
 
 def test_week_replay_has_result_and_in_sample_flag(client):
@@ -99,3 +112,36 @@ def test_unplayed_week_has_no_result(client):
 
 def test_missing_week_is_404(client):
     assert client.get("/api/predictions/week/2019/3").status_code == 404
+
+
+def test_status_returns_latest_run(client):
+    body = client.get("/api/predictions/status").json()
+    assert (body["season"], body["week"]) == (2026, 6)
+    assert body["predicted_games"] == 1 and body["scheduled_games"] == 2
+
+
+def test_forecast_made_before_kickoff_is_not_in_sample_even_for_trained_season(client):
+    # 2025 is in the model's training seasons, but this week was predicted
+    # (2025-10-01) before its games (2025-10-19): a genuine forecast.
+    assert client.get("/api/predictions/week/2025/7").json()["in_sample"] is False
+    # Generated after the games were played: a replay.
+    assert client.get("/api/predictions/week/2025/6").json()["in_sample"] is True
+
+
+def test_outdated_derived_tables_are_rebuilt():
+    from sqlalchemy import inspect, text
+
+    from app.database import ensure_derived_tables
+
+    engine = create_engine("sqlite://", poolclass=StaticPool)
+    with engine.begin() as conn:
+        conn.execute(text("create table weekly_predictions (id integer primary key, season integer)"))
+        conn.execute(text("insert into weekly_predictions values (1, 2025)"))
+
+    ensure_derived_tables(engine)
+
+    cols = {c["name"] for c in inspect(engine).get_columns("weekly_predictions")}
+    assert {"drivers", "model_version", "game_date"} <= cols
+    assert inspect(engine).has_table("prediction_runs")
+    with engine.connect() as conn:
+        assert conn.execute(text("select count(*) from weekly_predictions")).scalar() == 0

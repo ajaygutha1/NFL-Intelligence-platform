@@ -6,8 +6,15 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.ml import get_model_info
-from app.models import Game, WeeklyPrediction
-from app.schemas import WeeklyGameOut, WeeklyPredictionsOut, WeekSummaryOut
+from datetime import datetime
+
+from app.models import Game, PredictionRun, WeeklyPrediction
+from app.schemas import (
+    PredictionRunOut,
+    WeeklyGameOut,
+    WeeklyPredictionsOut,
+    WeekSummaryOut,
+)
 
 router = APIRouter(prefix="/api/predictions", tags=["predictions"])
 
@@ -30,6 +37,25 @@ def list_prediction_weeks(db: Session = Depends(get_db)):
         WeekSummaryOut(season=s, week=w, games=n, generated_at=g)
         for s, w, n, g in rows
     ]
+
+
+@router.get("/status", response_model=PredictionRunOut | None)
+def latest_run_status(db: Session = Depends(get_db)):
+    """The most recent (season, week) the pipeline attempted, or null."""
+    return (
+        db.query(PredictionRun)
+        .order_by(PredictionRun.season.desc(), PredictionRun.week.desc())
+        .first()
+    )
+
+
+def _is_replay(season: int, generated_at: str, first_game_date: str) -> bool:
+    """A week is an in-sample replay only if the model trained on its season AND
+    the predictions were generated after the games started. A forecast made
+    before kickoff stays a genuine forecast even after later retraining."""
+    if season not in get_model_info()["training_seasons"]:
+        return False
+    return datetime.fromisoformat(generated_at).date().isoformat() > first_game_date
 
 
 @router.get("/week/{season}/{week}", response_model=WeeklyPredictionsOut)
@@ -78,6 +104,6 @@ def get_week_predictions(season: int, week: int, db: Session = Depends(get_db)):
         week=week,
         generated_at=first.generated_at,
         model_version=first.model_version,
-        in_sample=season in get_model_info()["training_seasons"],
+        in_sample=_is_replay(season, first.generated_at, min(g.game_date for g in games)),
         games=games,
     )

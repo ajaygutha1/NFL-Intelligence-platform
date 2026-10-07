@@ -75,6 +75,16 @@ export type WeeklyPredictions = {
   games: WeeklyGame[];
 };
 
+export type PredictionRun = {
+  season: number;
+  week: number;
+  run_at: string;
+  first_kickoff: string;
+  scheduled_games: number;
+  predicted_games: number;
+  message: string;
+};
+
 async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, { cache: "no-store" });
 
@@ -108,4 +118,8 @@ export function getPredictionWeeks() {
 
 export function getWeeklyPredictions(season: number, week: number) {
   return apiGet<WeeklyPredictions>(`/api/predictions/week/${season}/${week}`);
+}
+
+export function getPredictionStatus() {
+  return apiGet<PredictionRun | null>("/api/predictions/status");
 }

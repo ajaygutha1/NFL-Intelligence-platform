@@ -2,8 +2,9 @@
 
 Re-run this any time `notebooks/03_backtest.py` regenerates the CSVs or the
 model bundle. Safe to run repeatedly: it wipes and re-creates every table it
-owns. `weekly_predictions` is owned by `src/predict_week.py`, so it is left
-untouched (and created if missing).
+owns. `weekly_predictions` and `prediction_runs` are owned by
+`src/predict_week.py`, so they are kept (rebuilt only if their columns are
+outdated).
 """
 
 import json
@@ -20,7 +21,12 @@ from app.config import (  # noqa: E402
     MODEL_DATA_CSV,
     MODEL_INSIGHTS_CSV,
 )
-from app.database import Base, SessionLocal, engine  # noqa: E402
+from app.database import (  # noqa: E402
+    Base,
+    SessionLocal,
+    engine,
+    ensure_derived_tables,
+)
 from app.ml import get_model_info  # noqa: E402
 from app.models import (  # noqa: E402
     BacktestMetric,
@@ -28,6 +34,7 @@ from app.models import (  # noqa: E402
     Game,
     ModelInsight,
     ModelVersion,
+    PredictionRun,
     WeeklyPrediction,
 )
 
@@ -35,10 +42,11 @@ from app.models import (  # noqa: E402
 def seed():
     seeded_tables = [
         t for t in Base.metadata.sorted_tables
-        if t.name != WeeklyPrediction.__tablename__
+        if t.name not in (WeeklyPrediction.__tablename__, PredictionRun.__tablename__)
     ]
     Base.metadata.drop_all(bind=engine, tables=seeded_tables)
     Base.metadata.create_all(bind=engine)
+    ensure_derived_tables()
 
     db = SessionLocal()
 

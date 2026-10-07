@@ -5,9 +5,11 @@ scores them with the saved model, and stores the results in the platform's
 `weekly_predictions` table so the API never has to call nflreadpy per request.
 
     python src/predict_week.py                    # next unplayed week, current season
+                                                  # (refreshes stale team stats first)
     python src/predict_week.py --season 2025 --week 12
     python src/predict_week.py --season 2025 --weeks 6-18
     python src/predict_week.py --dry-run          # print only, don't touch the DB
+    python src/predict_week.py --no-refresh       # skip the data-freshness check
 
 Needs `data/processed/team_game.csv` (notebook 01) and `models/nfl_win_model_v1.joblib`
 (notebook 03). The DB tables are created by `backend/scripts/seed_db.py`.
@@ -15,6 +17,8 @@ Needs `data/processed/team_game.csv` (notebook 01) and `models/nfl_win_model_v1.
 
 import argparse
 import json
+import os
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,6 +42,32 @@ def load_team_game():
     team_game = pd.read_csv(ROOT / "data" / "processed" / "team_game.csv")
     team_game["game_date"] = pd.to_datetime(team_game["game_date"])
     return team_game
+
+
+def played_game_count(schedule):
+    """Regular-season games with a final score according to the schedule."""
+    reg = schedule[schedule["game_type"] == "REG"]
+    return int(reg["home_score"].notna().sum())
+
+
+def team_game_is_stale(team_game, schedule, season):
+    """True when the schedule has more finished games than team_game.csv knows about."""
+    known = team_game[team_game["season"] == season]["game_id"].nunique()
+    return played_game_count(schedule) > known
+
+
+def refresh_team_game():
+    """Rebuild team_game.csv by rerunning notebook 01 (pulls the latest nflverse data)."""
+    print("Team stats are out of date - refreshing from nflverse (about a minute)...")
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "notebooks" / "01_team-gameexploration.py")],
+        env={**os.environ, "MPLBACKEND": "Agg"},
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        sys.exit(f"Refresh failed:\n{result.stderr[-1500:]}")
+    return load_team_game()
 
 
 def get_team_features(team_game, team, season, game_date):
@@ -156,10 +186,10 @@ def next_unplayed_week(schedule):
 
 
 def save_to_db(season, week, scored, model_version):
-    from app.database import Base, SessionLocal, engine
+    from app.database import SessionLocal, ensure_derived_tables
     from app.models import WeeklyPrediction
 
-    Base.metadata.create_all(bind=engine)
+    ensure_derived_tables()
     generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     db = SessionLocal()
@@ -193,6 +223,57 @@ def save_to_db(season, week, scored, model_version):
         db.close()
 
 
+def games_played_before(team_game, season, week_games):
+    """Most games any team has played this season before the week's first kickoff."""
+    first = week_games["game_date"].min()
+    prior = team_game[(team_game["season"] == season) & (team_game["game_date"] < first)]
+    return int(prior.groupby("team").size().max()) if len(prior) else 0
+
+
+def run_message(scheduled, predicted, max_played):
+    if predicted == scheduled:
+        return f"All {scheduled} games predicted."
+    if predicted == 0:
+        return (
+            f"No games predictable yet: each team needs {ROLLING_WINDOW} prior games "
+            f"this season and the most any team has played is {max_played}. "
+            "The weekly update will generate them once enough games are in."
+        )
+    return (
+        f"{predicted} of {scheduled} games predicted; the rest involve a team with "
+        f"fewer than {ROLLING_WINDOW} prior games (for example after a bye)."
+    )
+
+
+def save_run(season, week, week_games, predicted, message):
+    from app.database import SessionLocal, ensure_derived_tables
+    from app.models import PredictionRun
+
+    ensure_derived_tables()
+    db = SessionLocal()
+    try:
+        db.query(PredictionRun).filter(
+            PredictionRun.season == season, PredictionRun.week == week
+        ).delete()
+        db.add(
+            PredictionRun(
+                season=season,
+                week=week,
+                run_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                first_kickoff=week_games["game_date"].min().strftime("%Y-%m-%d"),
+                scheduled_games=len(week_games),
+                predicted_games=predicted,
+                message=message,
+            )
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
 def parse_weeks(args, schedule):
     if args.weeks:
         start, _, end = args.weeks.partition("-")
@@ -208,35 +289,47 @@ def main():
     parser.add_argument("--week", type=int)
     parser.add_argument("--weeks", help="inclusive range, e.g. 6-18")
     parser.add_argument("--dry-run", action="store_true", help="print, don't write to DB")
+    parser.add_argument(
+        "--no-refresh", action="store_true", help="don't refresh stale team stats"
+    )
     args = parser.parse_args()
 
     bundle = load_bundle()
     team_game = load_team_game()
+    schedule = nfl.load_schedules(args.season).to_pandas()
+
+    if not args.no_refresh and team_game_is_stale(team_game, schedule, args.season):
+        team_game = refresh_team_game()
+        if team_game_is_stale(team_game, schedule, args.season):
+            print(
+                "Note: nflverse play-by-play has not caught up with the schedule yet; "
+                "using the data available."
+            )
 
     if args.season not in set(team_game["season"].astype(int)):
-        sys.exit(
-            f"team_game.csv has no {args.season} data - rerun "
-            "notebooks/01_team-gameexploration.py first."
-        )
+        sys.exit(f"No {args.season} data available from nflverse yet.")
 
     if args.season in bundle["training_seasons"]:
         print(
-            f"Note: {args.season} is in the model's training data, so these "
-            "are in-sample replays, not out-of-sample forecasts."
+            f"Note: {args.season} is in the model's training data, so replays of "
+            "completed weeks are in-sample, not out-of-sample forecasts."
         )
-
-    schedule = nfl.load_schedules(args.season).to_pandas()
 
     for week in parse_weeks(args, schedule):
         week_games = load_week_games(schedule, week)
         matchups = build_matchup_features(team_game, week_games, args.season)
 
+        message = run_message(
+            len(week_games),
+            len(matchups),
+            games_played_before(team_game, args.season, week_games),
+        )
+
+        if not args.dry_run and not week_games.empty:
+            save_run(args.season, week, week_games, len(matchups), message)
+
         if matchups.empty:
-            print(
-                f"\n{args.season} week {week}: no predictable games "
-                f"({len(week_games)} scheduled; each team needs "
-                f"{ROLLING_WINDOW} prior games this season)."
-            )
+            print(f"\n{args.season} week {week}: {message}")
             continue
 
         scored = score_matchups(bundle, matchups)
