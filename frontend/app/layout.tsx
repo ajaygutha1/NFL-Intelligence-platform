@@ -20,8 +20,9 @@ export const metadata: Metadata = {
 };
 
 const NAV_LINKS = [
+  { href: "/", label: "Home", enabled: true },
   { href: "/model-performance", label: "Model Performance", enabled: true },
-  { href: "/predictions", label: "Weekly Predictions", enabled: true },
+  { href: "/predictions", label: "Predictions", enabled: true },
   { href: "/history", label: "Prediction History", enabled: true },
   { href: "/insights", label: "Model Insights", enabled: true },
 ];

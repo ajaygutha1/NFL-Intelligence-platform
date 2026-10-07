@@ -502,7 +502,7 @@ prediction_results[
 ).astype(int)
 
 
-print("\nPredictions:")
+print("\npredictions:")
 
 print(
     prediction_results.head(15)

@@ -16,7 +16,7 @@ Needs `data/processed/team_game.csv` (notebook 01) and `models/nfl_win_model_v1.
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import joblib
@@ -160,7 +160,7 @@ def save_to_db(season, week, scored, model_version):
     from app.models import WeeklyPrediction
 
     Base.metadata.create_all(bind=engine)
-    generated_at = datetime.now().isoformat(timespec="seconds")
+    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     db = SessionLocal()
     try:
@@ -186,6 +186,9 @@ def save_to_db(season, week, scored, model_version):
             for _, row in scored.iterrows()
         )
         db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
