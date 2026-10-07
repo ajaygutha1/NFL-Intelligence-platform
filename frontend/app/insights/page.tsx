@@ -1,9 +1,10 @@
+import { AiInsights } from "@/components/AiInsights";
 import { ImportanceChart } from "@/components/ImportanceChart";
 import { Card } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getModelInsights } from "@/lib/api";
-import { featureLabel } from "@/lib/features";
+import { featureDescription, featureLabel } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export default async function InsightsPage() {
         title="Model Insights"
         description="Two views of feature importance. Coefficients show how the model weighs each input; permutation importance shows how much accuracy actually depends on it."
       />
+
+      <AiInsights insights={insights} />
 
       <div className="grid gap-4 lg:grid-cols-2 mb-10">
         <Card>
@@ -50,6 +53,14 @@ export default async function InsightsPage() {
         rows={insights}
         columns={[
           { header: "Feature", render: (i) => featureLabel(i.feature) },
+          {
+            header: "What it measures",
+            render: (i) => (
+              <span className="text-xs text-muted font-sans">
+                {featureDescription(i.feature)}
+              </span>
+            ),
+          },
           {
             header: "Coefficient",
             render: (i) => i.coefficient.toFixed(3),
